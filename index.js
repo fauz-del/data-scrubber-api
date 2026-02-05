@@ -1,4 +1,4 @@
-require('dotenv').config(); // Loads variables from .env
+require('dotenv').config(); 
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
@@ -7,8 +7,20 @@ const { parsePhoneNumberFromString } = require('libphonenumber-js');
 
 const app = express();
 
-// Security & Setup
-app.use(helmet()); 
+// --- Security & Setup ---
+// We customize Helmet's Content Security Policy to allow the Tailwind CDN and inline styles
+app.use(
+    helmet({
+        contentSecurityPolicy: {
+            directives: {
+                "default-src": ["'self'"],
+                "script-src": ["'self'", "https://cdn.tailwindcss.com"],
+                "style-src": ["'self'", "'unsafe-inline'"],
+                "img-src": ["'self'", "data:"],
+            },
+        },
+    })
+);
 app.use(cors());
 app.use(express.json());
 
@@ -19,20 +31,16 @@ app.post('/api/v1/cleanse', (req, res) => {
     try {
         const { firstName, lastName, phone, email, country = 'US' } = req.body;
 
-        // 1. Name Formatting
         const formatName = (n) => n ? n.trim().charAt(0).toUpperCase() + n.trim().slice(1).toLowerCase() : '';
         const cleanFirst = formatName(firstName);
         const cleanLast = formatName(lastName);
 
-        // 2. Email Validation
         const cleanEmail = email ? email.trim().toLowerCase() : null;
         const isEmailValid = cleanEmail ? validator.isEmail(cleanEmail) : false;
 
-        // 3. Phone Standardization
         const phoneParsed = parsePhoneNumberFromString(phone || '', country);
         const isPhoneValid = phoneParsed ? phoneParsed.isValid() : false;
 
-        // 4. Professional Response
         res.status(200).json({
             success: true,
             meta: {
@@ -60,8 +68,7 @@ app.post('/api/v1/cleanse', (req, res) => {
     }
 });
 
-// Health Check for Hosting
-// Health Check & Landing Page with Live Indicator
+// --- Landing Page ---
 app.get('/', (req, res) => {
     res.send(`
     <!DOCTYPE html>
@@ -88,7 +95,6 @@ app.get('/', (req, res) => {
                 <div class="h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
                     <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                 </div>
-                <!-- THE LIVE INDICATOR -->
                 <div class="flex items-center space-x-2 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
                     <div class="h-2.5 w-2.5 bg-green-500 rounded-full animate-pulse-green"></div>
                     <span class="text-xs font-bold uppercase tracking-wider text-green-400">System Live</span>
@@ -122,9 +128,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// Change this:
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 });
-
